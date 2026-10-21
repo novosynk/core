@@ -15,8 +15,8 @@ object Config {
      */
     val OFFICIAL_PACKAGE_NAMES =
         setOf(
-            "com.novosynk.simpmusic",
-            "com.novosynk.simpmusic.dev",
+            "com.novosynk.musico",
+            "com.novosynk.musico.dev",
             "com.spotify.music",
         )
 
@@ -256,7 +256,7 @@ object SUPPORTED_LANGUAGE {
 }
 
 /**
- * The YouTube stream format ids (`itag`) SimpMusic asks for, in one place.
+ * The YouTube stream format ids (`itag`) Musico asks for, in one place.
  *
  * YouTube publishes dozens; these are the handful the player, the downloader and the extractor
  * health-check all have to agree on. Every itag reference belongs here — a bare number inside a
@@ -649,8 +649,8 @@ object MEDIA_CUSTOM_COMMAND {
 
 object MEDIA_NOTIFICATION {
     const val NOTIFICATION_ID = 200
-    const val NOTIFICATION_CHANNEL_NAME = "SimpMusic Playback Notification"
-    const val NOTIFICATION_CHANNEL_ID = "SimpMusic Playback Notification ID"
+    const val NOTIFICATION_CHANNEL_NAME = "Musico Playback Notification"
+    const val NOTIFICATION_CHANNEL_ID = "Musico Playback Notification ID"
 }
 
 const val SETTINGS_FILENAME = "settings"

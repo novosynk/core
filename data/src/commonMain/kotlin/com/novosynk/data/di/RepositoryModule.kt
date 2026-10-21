@@ -116,7 +116,7 @@ val repositoryModule =
         }
 
         single<UpdateRepository>(createdAtStart = true) {
-            UpdateRepositoryImpl(get())
+            UpdateRepositoryImpl(get(), get())
         }
 
         single<SupabaseRepository>(createdAtStart = true) {
