@@ -19,6 +19,8 @@ import com.novosynk.data.repository.PodcastRepositoryImpl
 import com.novosynk.data.repository.SearchRepositoryImpl
 import com.novosynk.data.repository.SongRepositoryImpl
 import com.novosynk.data.repository.StreamRepositoryImpl
+import com.novosynk.data.repository.SupabaseRepositoryImpl
+import com.novosynk.domain.repository.SupabaseRepository
 import com.novosynk.data.repository.TasteRepositoryImpl
 import com.novosynk.data.repository.UpdateRepositoryImpl
 import com.novosynk.domain.repository.AccountRepository
@@ -115,6 +117,10 @@ val repositoryModule =
 
         single<UpdateRepository>(createdAtStart = true) {
             UpdateRepositoryImpl(get())
+        }
+
+        single<SupabaseRepository>(createdAtStart = true) {
+            SupabaseRepositoryImpl()
         }
 
         single<AnalyticsRepository>(createdAtStart = true) {
