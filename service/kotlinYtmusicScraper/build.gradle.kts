@@ -70,7 +70,6 @@ kotlin {
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.kotlinx.serialization.json)
-                implementation(libs.kotlin.reflect)
                 implementation(libs.ktor.client.logging)
                 implementation(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.ktor.serialization.kotlinx.xml)
@@ -78,6 +77,7 @@ kotlin {
 
                 implementation(libs.ksoup.html)
                 implementation(libs.ksoup.entities)
+                implementation(libs.quickjs)
             }
         }
 
@@ -99,6 +99,7 @@ kotlin {
                 implementation(libs.pipepipe.extractor)
                 implementation(libs.brave.extractor)
                 implementation(libs.okhttp3.okhttp)
+                implementation(libs.kotlin.reflect)
             }
         }
 
@@ -117,6 +118,7 @@ kotlin {
                 implementation(libs.pipepipe.extractor)
                 implementation(libs.brave.extractor)
                 implementation(libs.okhttp3.okhttp)
+                implementation(libs.kotlin.reflect)
             }
         }
     }

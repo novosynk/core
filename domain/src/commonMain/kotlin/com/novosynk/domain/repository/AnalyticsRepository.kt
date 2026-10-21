@@ -4,6 +4,8 @@ import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedAlbum
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtist
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedTracks
+import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtistTime
+import com.novosynk.domain.data.model.analytics.AnalyticsPeriodStats
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.LocalDateTime
 
@@ -44,6 +46,11 @@ interface AnalyticsRepository {
         endTimestamp: LocalDateTime,
     ): Flow<List<TopPlayedArtist>>
 
+    suspend fun queryTopArtistsWithTimeInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Flow<List<TopPlayedArtistTime>>
+
     suspend fun queryTopAlbumsLastXDays(x: Int): Flow<List<TopPlayedAlbum>>
 
     suspend fun queryTopAlbumsInRange(
@@ -61,4 +68,9 @@ interface AnalyticsRepository {
         startTimestamp: LocalDateTime,
         endTimestamp: LocalDateTime,
     ): Flow<Long>
+
+    suspend fun getPeriodStats(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): AnalyticsPeriodStats
 }

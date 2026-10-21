@@ -1,10 +1,12 @@
 package com.novosynk.data.repository
 
+import com.novosynk.data.mapping.toHomeContent
 import com.novosynk.data.parser.parseChart
 import com.novosynk.data.parser.parseGenreObject
 import com.novosynk.data.parser.parseMixedContent
 import com.novosynk.data.parser.parseMoodsMomentObject
 import com.novosynk.data.parser.parseNewRelease
+import com.novosynk.domain.data.model.home.BrowsePage
 import com.novosynk.domain.data.model.home.HomeItem
 import com.novosynk.domain.data.model.home.chart.Chart
 import com.novosynk.domain.data.model.mood.Mood
@@ -400,5 +402,38 @@ internal class HomeRepositoryImpl(
                         emit(Resource.Error<GenreObject>(e.message.toString()))
                     }
             }
+        }.flowOn(Dispatchers.IO)
+
+    override fun getBrowsePage(
+        browseId: String,
+        params: String?,
+    ): Flow<Resource<BrowsePage>> =
+        flow {
+            youTube
+                .browse(browseId = browseId, params = params)
+                .onSuccess { result ->
+                    emit(
+                        Resource.Success(
+                            BrowsePage(
+                                title = result.title,
+                                contents =
+                                    result.items
+                                        .flatMap { it.items }
+                                        .distinctBy { it.id }
+                                        .map { it.toHomeContent() },
+                                moods =
+                                    result.items.flatMap { it.moods }.map { item ->
+                                        MoodItem(
+                                            title = item.title,
+                                            params = item.endpoint.params ?: "",
+                                            stripeColor = item.stripeColor,
+                                        )
+                                    },
+                            ),
+                        ),
+                    )
+                }.onFailure { e ->
+                    emit(Resource.Error<BrowsePage>(e.message.toString()))
+                }
         }.flowOn(Dispatchers.IO)
 }

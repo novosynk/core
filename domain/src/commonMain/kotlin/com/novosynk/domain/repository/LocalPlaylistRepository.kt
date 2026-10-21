@@ -56,6 +56,11 @@ interface LocalPlaylistRepository {
         videoId: String,
     ): Flow<PairSongLocalPlaylist?>
 
+    fun searchTracks(
+        playlistId: Long,
+        query: String,
+    ): Flow<List<Pair<SongEntity, PairSongLocalPlaylist>>>
+
     fun changePositionOfSongInPlaylist(
         playlistId: Long,
         videoId: String,

@@ -1,6 +1,7 @@
 package com.novosynk.domain.manager
 
 import com.novosynk.domain.data.model.network.ProxyConfiguration
+import com.novosynk.domain.data.player.ReverbPreset
 import kotlinx.coroutines.flow.Flow
 
 interface DataStoreManager {
@@ -451,12 +452,63 @@ interface DataStoreManager {
 
     suspend fun setAutoBackupLastTime(time: Long)
 
+    val nowPlayingStyle: Flow<String>
+
+    suspend fun setNowPlayingStyle(style: String)
+
+    val lyricsStyle: Flow<String>
+
+    suspend fun setLyricsStyle(style: String)
+
+    val lyricsOffsetMs: Flow<Int>
+
+    suspend fun setLyricsOffsetMs(offset: Int)
+
+    val romanizationLanguages: Flow<String>
+
+    suspend fun setRomanizationLanguages(languages: String)
+
+    val delayEnabled: Flow<String?>
+
+    suspend fun setDelayEnabled(enabled: Boolean)
+
+    val delayTimeMs: Flow<Int>
+
+    suspend fun setDelayTimeMs(timeMs: Int)
+
+    val delayFeedback: Flow<Float>
+
+    suspend fun setDelayFeedback(feedback: Float)
+
+    val delayMix: Flow<Float>
+
+    suspend fun setDelayMix(mix: Float)
+
+    val reverbEnabled: Flow<String?>
+
+    suspend fun setReverbEnabled(enabled: Boolean)
+
+    val reverbPreset: Flow<String>
+
+    suspend fun setReverbPreset(preset: ReverbPreset)
+
+    val reverbMix: Flow<Float>
+
+    suspend fun setReverbMix(mix: Float)
+
     enum class ProxyType {
         PROXY_TYPE_HTTP,
         PROXY_TYPE_SOCKS,
     }
 
     companion object Values {
+        const val NOW_PLAYING_STYLE_SPOTIFY = "SPOTIFY"
+        const val NOW_PLAYING_STYLE_M3_EXPRESSIVE = "M3_EXPRESSIVE"
+        const val NOW_PLAYING_STYLE_APPLE_MUSIC = "APPLE_MUSIC"
+
+        const val LYRICS_STYLE_CLASSIC = "CLASSIC"
+        const val LYRICS_STYLE_APPLE_MUSIC = "APPLE_MUSIC"
+
         const val Musico = "Musico"
         const val YOUTUBE = "youtube"
         const val LRCLIB = "lrclib"

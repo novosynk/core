@@ -1,5 +1,6 @@
 package com.novosynk.domain.repository
 
+import com.novosynk.domain.data.model.home.BrowsePage
 import com.novosynk.domain.data.model.home.HomeItem
 import com.novosynk.domain.data.model.home.chart.Chart
 import com.novosynk.domain.data.model.mood.Mood
@@ -45,4 +46,9 @@ interface HomeRepository {
     fun getGenreData(params: String): Flow<Resource<GenreObject>>
 
     fun getMoodData(params: String): Flow<Resource<MoodsMomentObject>>
+
+    fun getBrowsePage(
+        browseId: String,
+        params: String?,
+    ): Flow<Resource<BrowsePage>>
 }

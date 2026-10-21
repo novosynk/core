@@ -8,6 +8,7 @@ import com.novosynk.domain.repository.AccountRepository
 import com.novosynk.kotlinytmusicscraper.YouTube
 import com.novosynk.logger.Logger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

@@ -3,6 +3,7 @@ package com.novosynk.data.mapping
 import com.novosynk.data.parser.toListThumbnail
 import com.novosynk.domain.data.model.browse.album.Track
 import com.novosynk.domain.data.model.canvas.CanvasResult
+import com.novosynk.domain.data.model.home.Content
 import com.novosynk.domain.data.model.mediaService.SponsorSkipSegments
 import com.novosynk.domain.data.model.metadata.Line
 import com.novosynk.domain.data.model.metadata.Lyrics
@@ -23,6 +24,7 @@ import com.novosynk.kotlinytmusicscraper.models.SearchSuggestions
 import com.novosynk.kotlinytmusicscraper.models.SongItem
 import com.novosynk.kotlinytmusicscraper.models.VideoItem
 import com.novosynk.kotlinytmusicscraper.models.WatchEndpoint
+import com.novosynk.kotlinytmusicscraper.models.YTItem
 import com.novosynk.kotlinytmusicscraper.models.response.PipedResponse
 import com.novosynk.kotlinytmusicscraper.models.sponsorblock.SkipSegments
 import com.novosynk.kotlinytmusicscraper.models.youtube.Transcript
@@ -504,3 +506,100 @@ internal fun AccountInfo.toDomainAccountInfo(): com.novosynk.domain.data.model.a
         pageId = this.pageId,
         thumbnails = thumbnails.toListThumbnail(),
     )
+
+internal fun YTItem.toHomeContent(): Content =
+    when (this) {
+        is SongItem -> {
+            Content(
+                album = album?.let { Album(id = it.id, name = it.name) },
+                artists = artists.map { Artist(id = it.id, name = it.name) },
+                description = null,
+                isExplicit = explicit,
+                playlistId = null,
+                browseId = null,
+                thumbnails = listOf(Thumbnail(height = 544, url = thumbnail, width = 544)),
+                title = title,
+                videoId = id,
+                views = null,
+                durationSeconds = duration,
+                videoType = musicVideoType,
+            )
+        }
+
+        is VideoItem -> {
+            Content(
+                album = album?.let { Album(id = it.id, name = it.name) },
+                artists = artists.map { Artist(id = it.id, name = it.name) },
+                description = null,
+                isExplicit = explicit,
+                playlistId = null,
+                browseId = null,
+                thumbnails = listOf(Thumbnail(height = 720, url = thumbnail, width = 1280)),
+                title = title,
+                videoId = id,
+                views = view,
+                durationSeconds = duration,
+                videoType = musicVideoType,
+            )
+        }
+
+        is AlbumItem -> {
+            Content(
+                album = null,
+                artists = artists?.map { Artist(id = it.id, name = it.name) },
+                description = null,
+                isExplicit = explicit,
+                playlistId = null,
+                browseId = browseId,
+                thumbnails = listOf(Thumbnail(height = 544, url = thumbnail, width = 544)),
+                title = title,
+                videoId = null,
+                views = null,
+            )
+        }
+
+        is PlaylistItem -> {
+            Content(
+                album = null,
+                artists = author?.let { listOf(Artist(id = it.id, name = it.name)) },
+                description = songCountText,
+                isExplicit = false,
+                playlistId = id,
+                browseId = null,
+                thumbnails = listOf(Thumbnail(height = 544, url = thumbnail, width = 544)),
+                title = title,
+                videoId = null,
+                views = null,
+            )
+        }
+
+        is ArtistItem -> {
+            Content(
+                album = null,
+                artists = null,
+                description = subscribers,
+                isExplicit = false,
+                playlistId = null,
+                browseId = id,
+                thumbnails = listOf(Thumbnail(height = 544, url = thumbnail, width = 544)),
+                title = title,
+                videoId = null,
+                views = null,
+            )
+        }
+
+        else -> {
+            Content(
+                album = null,
+                artists = null,
+                description = null,
+                isExplicit = false,
+                playlistId = null,
+                browseId = null,
+                thumbnails = emptyList(),
+                title = "",
+                videoId = null,
+                views = null,
+            )
+        }
+    }

@@ -20,6 +20,7 @@ import com.novosynk.domain.utils.Resource
 import com.novosynk.kotlinytmusicscraper.YouTube
 import com.novosynk.logger.Logger
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn

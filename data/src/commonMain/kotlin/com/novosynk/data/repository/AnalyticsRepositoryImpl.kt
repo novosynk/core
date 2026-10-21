@@ -5,6 +5,10 @@ import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedAlbum
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtist
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedTracks
+import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtistTime
+import com.novosynk.domain.data.model.analytics.AnalyticsPeriodStats
+import com.novosynk.domain.data.model.analytics.DecadePlays
+import com.novosynk.domain.data.model.analytics.ListeningFingerprint
 import com.novosynk.domain.repository.AnalyticsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -12,7 +16,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlin.math.ln
+import kotlin.math.sqrt
 
 private const val TAG = "AnalyticsRepositoryImpl"
 
@@ -98,6 +105,19 @@ internal class AnalyticsRepositoryImpl(
             )
         }.flowOn(Dispatchers.IO)
 
+    override suspend fun queryTopArtistsWithTimeInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Flow<List<TopPlayedArtistTime>> =
+        flow {
+            emit(
+                analyticsDatasource.queryTopArtistsWithTimeInRange(
+                    startTimestamp,
+                    endTimestamp,
+                ),
+            )
+        }.flowOn(Dispatchers.IO)
+
     override suspend fun queryTopAlbumsLastXDays(x: Int): Flow<List<TopPlayedAlbum>> =
         flow {
             emit(analyticsDatasource.queryTopAlbumsLastXDays(x))
@@ -143,4 +163,101 @@ internal class AnalyticsRepositoryImpl(
                 ),
             )
         }.flowOn(Dispatchers.IO)
+
+    override suspend fun getPeriodStats(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): AnalyticsPeriodStats =
+        withContext(Dispatchers.IO) {
+            val samples = analyticsDatasource.getPlaybackSamplesInRange(startTimestamp, endTimestamp)
+            if (samples.isEmpty()) return@withContext AnalyticsPeriodStats()
+
+            val hours = IntArray(24)
+            val perDay = mutableMapOf<LocalDate, Int>()
+            var listened = 0L
+            samples.forEach { sample ->
+                hours[sample.timestamp.hour]++
+                perDay[sample.timestamp.date] = (perDay[sample.timestamp.date] ?: 0) + 1
+                listened += sample.listenedSecond
+            }
+            val busiest = perDay.maxByOrNull { it.value }
+
+            val distinctTracks = analyticsDatasource.getDistinctTrackCountInRange(startTimestamp, endTimestamp)
+            val distinctAlbums = analyticsDatasource.getDistinctAlbumCountInRange(startTimestamp, endTimestamp)
+            val distinctArtists = analyticsDatasource.getDistinctArtistCountInRange(startTimestamp, endTimestamp)
+            val newArtists = analyticsDatasource.getNewArtistCountInRange(startTimestamp, endTimestamp)
+            val artistPlays = analyticsDatasource.getArtistPlayCountsInRange(startTimestamp, endTimestamp)
+            val decades = analyticsDatasource.getDecadeCountsInRange(startTimestamp, endTimestamp)
+            val datedPlays = analyticsDatasource.getDatedPlayCountInRange(startTimestamp, endTimestamp)
+
+            AnalyticsPeriodStats(
+                plays = samples.size.toLong(),
+                listenedSeconds = listened,
+                distinctTracks = distinctTracks,
+                distinctAlbums = distinctAlbums,
+                distinctArtists = distinctArtists,
+                newArtists = newArtists,
+                activeDays = perDay.size,
+                busiestDay = busiest?.key,
+                busiestDayPlays = busiest?.value ?: 0,
+                playsByHour = hours.toList(),
+                decades = decades.map { DecadePlays(it.decade, it.playCount) },
+                datedPlays = datedPlays,
+                fingerprint =
+                    fingerprintOf(
+                        dailyCounts = perDay.values.toList(),
+                        artistPlays = artistPlays.map { it.playCount },
+                        newArtists = newArtists,
+                        distinctArtists = distinctArtists,
+                        distinctTracks = distinctTracks,
+                        plays = samples.size,
+                    ),
+            )
+        }
+
+    private fun fingerprintOf(
+        dailyCounts: List<Int>,
+        artistPlays: List<Int>,
+        newArtists: Int,
+        distinctArtists: Int,
+        distinctTracks: Int,
+        plays: Int,
+    ): ListeningFingerprint {
+        val consistency =
+            if (dailyCounts.size < 2) {
+                0f
+            } else {
+                val mean = dailyCounts.average()
+                if (mean <= 0.0) {
+                    0f
+                } else {
+                    val variance = dailyCounts.sumOf { (it - mean) * (it - mean) } / dailyCounts.size
+                    (1.0 - sqrt(variance) / mean).coerceIn(0.0, 1.0).toFloat()
+                }
+            }
+
+        val artistTotal = artistPlays.sum()
+        val diversity =
+            if (artistTotal <= 0 || artistPlays.size < 2) {
+                0f
+            } else {
+                val entropy =
+                    artistPlays.sumOf { count ->
+                        val p = count.toDouble() / artistTotal
+                        if (p > 0.0) -p * ln(p) else 0.0
+                    }
+                (entropy / ln(artistPlays.size.toDouble())).coerceIn(0.0, 1.0).toFloat()
+            }
+
+        val concentration =
+            if (artistTotal <= 0) 0f else (artistPlays.take(5).sum().toFloat() / artistTotal).coerceIn(0f, 1f)
+
+        return ListeningFingerprint(
+            consistency = consistency,
+            discovery = if (distinctArtists <= 0) 0f else (newArtists.toFloat() / distinctArtists).coerceIn(0f, 1f),
+            diversity = diversity,
+            concentration = concentration,
+            replay = if (plays <= 0) 0f else (1f - distinctTracks.toFloat() / plays).coerceIn(0f, 1f),
+        )
+    }
 }

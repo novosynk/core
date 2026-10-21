@@ -504,6 +504,11 @@ internal class LocalDataSource(
         null
     }
 
+    suspend fun searchPlaylistPairSong(
+        playlistId: Long,
+        query: String,
+    ) = databaseDao.searchPlaylistPairSong(playlistId, query)
+
     suspend fun getPlaylistPairSongByTime(
         playlistId: Long,
         filterState: FilterState,

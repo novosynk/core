@@ -11,6 +11,7 @@ import com.novosynk.common.SELECTED_LANGUAGE
 import com.novosynk.common.SUPPORTED_LANGUAGE
 import com.novosynk.common.SponsorBlockType
 import com.novosynk.domain.data.model.network.ProxyConfiguration
+import com.novosynk.domain.data.player.ReverbPreset
 import com.novosynk.domain.manager.DataStoreManager
 import com.novosynk.domain.manager.DataStoreManager.Values.AI_PROVIDER_GEMINI
 import com.novosynk.domain.manager.DataStoreManager.Values.FALSE
@@ -1586,7 +1587,162 @@ internal class DataStoreManagerImpl(
         }
     }
 
+    override val nowPlayingStyle: Flow<String> =
+        settingsDataStore.data.map { preferences ->
+            preferences[NOW_PLAYING_STYLE] ?: DataStoreManager.NOW_PLAYING_STYLE_SPOTIFY
+        }
+
+    override suspend fun setNowPlayingStyle(style: String) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[NOW_PLAYING_STYLE] = style
+            }
+        }
+    }
+
+    override val lyricsStyle: Flow<String> =
+        settingsDataStore.data.map { preferences ->
+            preferences[LYRICS_STYLE] ?: DataStoreManager.LYRICS_STYLE_CLASSIC
+        }
+
+    override suspend fun setLyricsStyle(style: String) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[LYRICS_STYLE] = style
+            }
+        }
+    }
+
+    override val lyricsOffsetMs: Flow<Int> =
+        settingsDataStore.data.map { preferences ->
+            preferences[LYRICS_OFFSET_MS] ?: 0
+        }
+
+    override suspend fun setLyricsOffsetMs(offset: Int) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[LYRICS_OFFSET_MS] = offset
+            }
+        }
+    }
+
+    override val romanizationLanguages: Flow<String> =
+        settingsDataStore.data.map { preferences ->
+            preferences[ROMANIZATION_LANGUAGES] ?: ""
+        }
+
+    override suspend fun setRomanizationLanguages(languages: String) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[ROMANIZATION_LANGUAGES] = languages
+            }
+        }
+    }
+
+    override val delayEnabled: Flow<String?> =
+        settingsDataStore.data.map { preferences ->
+            preferences[DELAY_ENABLED] ?: FALSE
+        }
+
+    override suspend fun setDelayEnabled(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[DELAY_ENABLED] = if (enabled) TRUE else FALSE
+            }
+        }
+    }
+
+    override val delayTimeMs: Flow<Int> =
+        settingsDataStore.data.map { preferences ->
+            preferences[DELAY_TIME_MS] ?: 300
+        }
+
+    override suspend fun setDelayTimeMs(timeMs: Int) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[DELAY_TIME_MS] = timeMs
+            }
+        }
+    }
+
+    override val delayFeedback: Flow<Float> =
+        settingsDataStore.data.map { preferences ->
+            preferences[DELAY_FEEDBACK] ?: 0.35f
+        }
+
+    override suspend fun setDelayFeedback(feedback: Float) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[DELAY_FEEDBACK] = feedback
+            }
+        }
+    }
+
+    override val delayMix: Flow<Float> =
+        settingsDataStore.data.map { preferences ->
+            preferences[DELAY_MIX] ?: 0.25f
+        }
+
+    override suspend fun setDelayMix(mix: Float) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[DELAY_MIX] = mix
+            }
+        }
+    }
+
+    override val reverbEnabled: Flow<String?> =
+        settingsDataStore.data.map { preferences ->
+            preferences[REVERB_ENABLED] ?: FALSE
+        }
+
+    override suspend fun setReverbEnabled(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[REVERB_ENABLED] = if (enabled) TRUE else FALSE
+            }
+        }
+    }
+
+    override val reverbPreset: Flow<String> =
+        settingsDataStore.data.map { preferences ->
+            preferences[REVERB_PRESET] ?: ReverbPreset.HALL.name
+        }
+
+    override suspend fun setReverbPreset(preset: ReverbPreset) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[REVERB_PRESET] = preset.name
+            }
+        }
+    }
+
+    override val reverbMix: Flow<Float> =
+        settingsDataStore.data.map { preferences ->
+            preferences[REVERB_MIX] ?: 0.25f
+        }
+
+    override suspend fun setReverbMix(mix: Float) {
+        withContext(Dispatchers.IO) {
+            settingsDataStore.edit { settings ->
+                settings[REVERB_MIX] = mix
+            }
+        }
+    }
+
     companion object Settings {
+        val NOW_PLAYING_STYLE = stringPreferencesKey("now_playing_style")
+        val DELAY_ENABLED = stringPreferencesKey("delay_enabled")
+        val DELAY_TIME_MS = intPreferencesKey("delay_time_ms")
+        val DELAY_FEEDBACK = floatPreferencesKey("delay_feedback")
+        val DELAY_MIX = floatPreferencesKey("delay_mix")
+        val REVERB_ENABLED = stringPreferencesKey("reverb_enabled")
+        val REVERB_PRESET = stringPreferencesKey("reverb_preset")
+        val REVERB_MIX = floatPreferencesKey("reverb_mix")
+
+        val LYRICS_STYLE = stringPreferencesKey("lyrics_style")
+        val LYRICS_OFFSET_MS = intPreferencesKey("lyrics_offset_ms")
+        val ROMANIZATION_LANGUAGES = stringPreferencesKey("romanization_languages")
         val APP_VERSION = stringPreferencesKey("app_version")
         val COOKIE = stringPreferencesKey("cookie")
 

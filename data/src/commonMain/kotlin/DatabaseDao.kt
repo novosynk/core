@@ -32,6 +32,9 @@ import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedAlbum
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtist
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedTracks
+import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtistTime
+import com.novosynk.domain.data.entities.analytics.query.PlaybackSample
+import com.novosynk.domain.data.entities.analytics.query.DecadeCount
 import com.novosynk.domain.data.type.PlaylistType
 import com.novosynk.domain.data.type.RecentlyType
 import com.novosynk.domain.extension.now
@@ -832,6 +835,18 @@ interface DatabaseDao {
     ): List<PairSongLocalPlaylist>
 
     @Query(
+        "SELECT p.* FROM pair_song_local_playlist p " +
+            "JOIN song s ON p.songId = s.videoId " +
+            "WHERE p.playlistId = :playlistId " +
+            "AND (s.title LIKE '%' || :query || '%' OR s.artistName LIKE '%' || :query || '%') " +
+            "ORDER BY p.position ASC",
+    )
+    suspend fun searchPlaylistPairSong(
+        playlistId: Long,
+        query: String,
+    ): List<PairSongLocalPlaylist>
+
+    @Query(
         "DELETE FROM pair_song_local_playlist WHERE songId = :videoId AND playlistId = :playlistId",
     )
     suspend fun deletePairSongLocalPlaylist(
@@ -1294,4 +1309,93 @@ interface DatabaseDao {
         startTimestamp: LocalDateTime,
         endTimestamp: LocalDateTime,
     ): Long
+
+    @Query(
+        "SELECT ea.channelId, COUNT(*) AS playCount, SUM(pe.listenedSecond) AS totalListeningTime" +
+            " FROM event_artist ea JOIN playback_event pe ON pe.eventId = ea.eventId" +
+            " WHERE ea.timestamp BETWEEN :startTimestamp AND :endTimestamp" +
+            " GROUP BY ea.channelId ORDER BY playCount DESC" +
+            " LIMIT 100",
+    )
+    suspend fun queryTopArtistsWithTimeInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): List<TopPlayedArtistTime>
+
+    @Query(
+        "SELECT timestamp, listenedSecond FROM playback_event" +
+            " WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp",
+    )
+    suspend fun getPlaybackSamplesInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): List<PlaybackSample>
+
+    @Query(
+        "SELECT COUNT(DISTINCT videoId) FROM playback_event" +
+            " WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp",
+    )
+    suspend fun getDistinctTrackCountInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Int
+
+    @Query(
+        "SELECT COUNT(DISTINCT albumBrowseId) FROM playback_event" +
+            " WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp AND albumBrowseId IS NOT NULL",
+    )
+    suspend fun getDistinctAlbumCountInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Int
+
+    @Query(
+        "SELECT COUNT(DISTINCT channelId) FROM event_artist" +
+            " WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp",
+    )
+    suspend fun getDistinctArtistCountInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Int
+
+    @Query(
+        "SELECT COUNT(*) FROM (SELECT channelId FROM event_artist GROUP BY channelId" +
+            " HAVING MIN(timestamp) BETWEEN :startTimestamp AND :endTimestamp)",
+    )
+    suspend fun getNewArtistCountInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Int
+
+    @Query(
+        "SELECT channelId, COUNT(*) AS playCount FROM event_artist" +
+            " WHERE timestamp BETWEEN :startTimestamp AND :endTimestamp" +
+            " GROUP BY channelId ORDER BY playCount DESC",
+    )
+    suspend fun getArtistPlayCountsInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): List<TopPlayedArtist>
+
+    @Query(
+        "SELECT (CAST(SUBSTR(a.year, 1, 4) AS INTEGER) / 10) * 10 AS decade, COUNT(*) AS playCount" +
+            " FROM playback_event p JOIN album a ON a.browseId = p.albumBrowseId" +
+            " WHERE p.timestamp BETWEEN :startTimestamp AND :endTimestamp" +
+            " AND a.year IS NOT NULL AND CAST(SUBSTR(a.year, 1, 4) AS INTEGER) > 1900" +
+            " GROUP BY decade ORDER BY decade",
+    )
+    suspend fun getDecadeCountsInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): List<DecadeCount>
+
+    @Query(
+        "SELECT COUNT(*) FROM playback_event p JOIN album a ON a.browseId = p.albumBrowseId" +
+            " WHERE p.timestamp BETWEEN :startTimestamp AND :endTimestamp" +
+            " AND a.year IS NOT NULL AND CAST(SUBSTR(a.year, 1, 4) AS INTEGER) > 1900",
+    )
+    suspend fun getDatedPlayCountInRange(
+        startTimestamp: LocalDateTime,
+        endTimestamp: LocalDateTime,
+    ): Int
 }

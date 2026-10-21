@@ -812,6 +812,23 @@ internal class LocalPlaylistRepositoryImpl(
             )
         }.flowOn(Dispatchers.IO)
 
+    override fun searchTracks(
+        playlistId: Long,
+        query: String,
+    ): Flow<List<Pair<SongEntity, PairSongLocalPlaylist>>> =
+        flow {
+            val pairs = localDataSource.searchPlaylistPairSong(playlistId, query)
+            val songs = localDataSource.getSongByListVideoIdFull(pairs.map { it.songId })
+            val idValue = songs.associateBy { it.videoId }
+            val sorted =
+                pairs.mapNotNull { pair ->
+                    idValue[pair.songId]?.let { song ->
+                        Pair(song, pair)
+                    }
+                }
+            emit(sorted)
+        }.flowOn(Dispatchers.IO)
+
     override fun changePositionOfSongInPlaylist(
         playlistId: Long,
         videoId: String,
