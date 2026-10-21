@@ -2,17 +2,14 @@ package com.novosynk.kotlinytmusicscraper.utils
 
 import com.novosynk.kotlinytmusicscraper.models.response.AudioData
 import com.novosynk.logger.Logger
-import kotlin.time.Clock
 import kotlinx.serialization.json.Json
-import okio.ByteString.Companion.encodeUtf8
+import java.security.MessageDigest
+import java.time.Instant
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
-fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte ->
-    (eachByte.toInt() and 0xFF).toString(16).padStart(2, '0')
-}
+fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
-fun sha1(str: String): String = str.encodeUtf8().sha1().hex()
+fun sha1(str: String): String = MessageDigest.getInstance("SHA-1").digest(str.toByteArray()).toHex()
 
 fun parseCookieString(cookie: String): Map<String, String> =
     cookie
@@ -45,7 +42,7 @@ fun generateNetscapeCookies(
     path: String = "/",
     secure: Boolean = false,
     httpOnly: Boolean = false,
-    expirationTimeSeconds: Long = (Clock.System.now().toEpochMilliseconds() / 1000) + 86400 * 365,
+    expirationTimeSeconds: Long = Instant.now().epochSecond + 86400 * 365,
 ): String {
     val header =
         "# Netscape HTTP Cookie File\n" +
@@ -75,7 +72,6 @@ fun generateNetscapeCookies(
     return header + cookieLines
 }
 
-@OptIn(ExperimentalEncodingApi::class)
 fun String.decodeTidalManifest(): AudioData? {
     val decodedBytes = Base64.decode(this)
     val jsonString = decodedBytes.decodeToString()
@@ -93,7 +89,6 @@ fun String.decodeTidalManifest(): AudioData? {
     }
 }
 
-@OptIn(ExperimentalEncodingApi::class)
 fun String.decodeBase64(): String {
     val decodedBytes = Base64.decode(this)
     return decodedBytes.decodeToString()

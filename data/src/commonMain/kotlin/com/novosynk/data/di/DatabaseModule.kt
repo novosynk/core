@@ -18,8 +18,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import org.koin.dsl.module
 import com.novosynk.aiservice.AiClient
-import com.novosynk.lyrics.MusicoLyricsClient
+import com.novosynk.lyrics.SimpMusicLyricsClient
 import kotlin.time.ExperimentalTime
+import com.novosynk.autoeq.AutoEq
 
 @OptIn(ExperimentalTime::class)
 val databaseModule =
@@ -71,6 +72,12 @@ val databaseModule =
         }
 
         single(createdAtStart = true) {
-            MusicoLyricsClient()
+            SimpMusicLyricsClient()
+        }
+
+        // Not created at start, unlike the rest: nothing needs it until someone opens the AutoEq
+        // picker, and it holds an HTTP client the vast majority of sessions never use.
+        single {
+            AutoEq()
         }
     }

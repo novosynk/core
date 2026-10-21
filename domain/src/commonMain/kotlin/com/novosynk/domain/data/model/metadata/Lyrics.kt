@@ -7,13 +7,15 @@ data class Lyrics(
     val error: Boolean = false,
     val lines: List<Line>?,
     val syncType: String?,
-    val MusicoLyrics: MusicoLyrics? = null,
+    val simpMusicLyrics: SimpMusicLyrics? = null,
 ) {
-    val simpMusicLyrics: MusicoLyrics? get() = MusicoLyrics
+    val MusicoLyrics: SimpMusicLyrics? get() = simpMusicLyrics
 }
 
 @Serializable
-data class MusicoLyrics(
+data class SimpMusicLyrics(
     val id: String,
     val vote: Int,
 )
+
+typealias MusicoLyrics = SimpMusicLyrics

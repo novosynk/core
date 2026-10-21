@@ -130,13 +130,14 @@ class LastfmScrobbler(
     ) {
         Logger.e(TAG, "$method failed (${error.code}): ${error.message}")
         if (error.needsReauth) {
+            Logger.e("Auth", "Last.fm: session rejected (code ${error.code}), signing out — the user must log in again")
             dataStoreManager.setLastfmSession(sessionKey = "", username = "")
         }
     }
 }
 
 /**
- * Last.fm takes a single artist name, not Musico's list.
+ * Last.fm takes a single artist name, not SimpMusic's list.
  *
  * The first entry is the primary artist — and since the parser now keeps only the first group of
  * the subtitle column, it is an artist rather than an album name or a view count.

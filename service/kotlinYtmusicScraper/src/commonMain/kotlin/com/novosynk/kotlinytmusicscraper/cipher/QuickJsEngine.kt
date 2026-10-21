@@ -66,7 +66,7 @@ internal class QuickJsEngine(
 
                         else -> {
                             if (c.code < 0x20) {
-                                append("\\u${c.code.toString(16).padStart(4, '0')}")
+                                append("\\u%04x".format(c.code))
                             } else {
                                 append(c)
                             }

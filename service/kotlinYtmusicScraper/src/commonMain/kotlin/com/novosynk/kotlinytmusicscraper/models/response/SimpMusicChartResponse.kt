@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MusicoChartResponse(
+data class SimpMusicChartResponse(
     @SerialName("data")
     val data: List<Data?>?,
     @SerialName("meta")

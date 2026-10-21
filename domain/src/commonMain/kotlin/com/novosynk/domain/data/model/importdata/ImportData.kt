@@ -3,7 +3,7 @@ package com.novosynk.domain.data.model.importdata
 import kotlinx.serialization.Serializable
 
 /**
- * The file the Musico web converter produces from a Spotify export or another client's backup.
+ * The file the SimpMusic web converter produces from a Spotify export or another client's backup.
  *
  * The web side has already matched every track to a YouTube Music videoId, so nothing here is
  * looked up again — the app only parses this and writes rows. The converter caps a file at 10,000

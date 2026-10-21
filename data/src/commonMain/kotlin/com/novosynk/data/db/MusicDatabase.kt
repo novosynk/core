@@ -9,6 +9,10 @@ import androidx.room.execSQL
 import androidx.room.useWriterConnection
 import com.novosynk.domain.data.entities.AlbumEntity
 import com.novosynk.domain.data.entities.ArtistEntity
+import com.novosynk.domain.data.entities.ArtistMotionEntity
+import com.novosynk.domain.data.entities.AutoEqCurveEntity
+import com.novosynk.domain.data.entities.AutoEqEntryEntity
+import com.novosynk.domain.data.entities.AutoEqIndexMetaEntity
 import com.novosynk.domain.data.entities.EpisodeEntity
 import com.novosynk.domain.data.entities.FollowedArtistSingleAndAlbum
 import com.novosynk.domain.data.entities.GoogleAccountEntity
@@ -35,9 +39,11 @@ import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
         AlbumEntity::class, PlaylistEntity::class, LocalPlaylistEntity::class, LyricsEntity::class, QueueEntity::class,
         SetVideoIdEntity::class, PairSongLocalPlaylist::class, GoogleAccountEntity::class, FollowedArtistSingleAndAlbum::class,
         NotificationEntity::class, TranslatedLyricsEntity::class, PodcastsEntity::class, EpisodeEntity::class,
-        YourYouTubePlaylistList::class, PlaybackEventEntity::class, EventArtistEntity::class
+        YourYouTubePlaylistList::class, PlaybackEventEntity::class, EventArtistEntity::class,
+        AutoEqEntryEntity::class, AutoEqIndexMetaEntity::class, AutoEqCurveEntity::class,
+        ArtistMotionEntity::class
     ],
-    version = 24,
+    version = 27,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 2, to = 3), AutoMigration(
@@ -78,6 +84,20 @@ import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
         AutoMigration(23, 24),
         AutoMigration(22, 24),
         AutoMigration(21, 24),
+        // 25 adds the AutoEq cache. Three new tables and nothing else, so Room generates
+        // the migration itself — no spec, and no path by which existing rows can be touched.
+        AutoMigration(24, 25),
+        AutoMigration(23, 25),
+        AutoMigration(22, 25),
+        // 26 adds GoogleAccountEntity.authUser (NOT NULL, SQL default 0), nothing else.
+        AutoMigration(25, 26),
+        AutoMigration(24, 26),
+        AutoMigration(23, 26),
+        // 27 adds artist_motion. One new table and nothing else, so Room generates the migration
+        // itself — no spec, and no path by which an existing row can be touched.
+        AutoMigration(26, 27),
+        AutoMigration(25, 27),
+        AutoMigration(24, 27),
     ],
 )
 @TypeConverters(Converters::class)

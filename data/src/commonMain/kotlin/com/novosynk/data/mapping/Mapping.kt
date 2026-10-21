@@ -2,6 +2,10 @@ package com.novosynk.data.mapping
 
 import com.novosynk.data.parser.toListThumbnail
 import com.novosynk.domain.data.model.browse.album.Track
+import com.novosynk.domain.data.model.comments.CommentLikeState
+import com.novosynk.domain.data.model.comments.YouTubeComment
+import com.novosynk.domain.data.model.comments.YouTubeCommentsHeader
+import com.novosynk.domain.data.model.comments.YouTubeCommentsPage
 import com.novosynk.domain.data.model.canvas.CanvasResult
 import com.novosynk.domain.data.model.home.Content
 import com.novosynk.domain.data.model.mediaService.SponsorSkipSegments
@@ -16,6 +20,7 @@ import com.novosynk.domain.data.model.searchResult.songs.SongsResult
 import com.novosynk.domain.data.model.searchResult.songs.Thumbnail
 import com.novosynk.domain.data.model.searchResult.videos.VideosResult
 import com.novosynk.domain.data.model.streams.YouTubeWatchEndpoint
+import com.novosynk.domain.utils.LIVE_RESULT_TYPE
 import com.novosynk.kotlinytmusicscraper.models.AccountInfo
 import com.novosynk.kotlinytmusicscraper.models.AlbumItem
 import com.novosynk.kotlinytmusicscraper.models.ArtistItem
@@ -29,6 +34,8 @@ import com.novosynk.kotlinytmusicscraper.models.response.PipedResponse
 import com.novosynk.kotlinytmusicscraper.models.sponsorblock.SkipSegments
 import com.novosynk.kotlinytmusicscraper.models.youtube.Transcript
 import com.novosynk.kotlinytmusicscraper.models.youtube.YouTubeInitialPage
+import com.novosynk.kotlinytmusicscraper.pages.CommentItem
+import com.novosynk.kotlinytmusicscraper.pages.CommentsPage
 import com.novosynk.spotify.model.response.spotify.CanvasResponse
 import com.novosynk.spotify.model.response.spotify.SpotifyLyricsResponse
 import com.novosynk.lyrics.models.response.LyricsResponse
@@ -53,7 +60,7 @@ internal fun SongItem.toTrack(): Track =
         videoType = this.musicVideoType,
         category = null,
         feedbackTokens = null,
-        resultType = null,
+        resultType = if (this.isLive) LIVE_RESULT_TYPE else null,
         year = null,
     )
 
@@ -72,7 +79,7 @@ internal fun VideoItem.toTrack(): Track =
         videoType = this.musicVideoType,
         category = null,
         feedbackTokens = null,
-        resultType = null,
+        resultType = if (this.isLive) LIVE_RESULT_TYPE else null,
         year = null,
     )
 
@@ -283,7 +290,7 @@ internal fun AlbumItem.toAlbumsResult(): AlbumsResult =
         year = this.year?.toString() ?: "",
     )
 
-// Musico Lyrics Extension
+// SimpMusic Lyrics Extension
 internal fun LyricsResponse.toLyrics(): Lyrics? =
     (
         richSyncLyrics?.takeIf { it.isNotEmpty() }?.let {
@@ -326,7 +333,7 @@ internal fun SearchSuggestions.toDomainSearchSuggestions(): com.novosynk.domain.
                             durationSeconds = it.duration,
                             feedbackTokens = null,
                             isExplicit = it.explicit,
-                            resultType = "Song",
+                            resultType = if (it.isLive) LIVE_RESULT_TYPE else "Song",
                             thumbnails = it.thumbnails?.thumbnails?.toListThumbnail() ?: listOf(),
                             title = it.title,
                             videoId = it.id,
@@ -413,7 +420,7 @@ internal fun SearchSuggestions.toDomainSearchSuggestions(): com.novosynk.domain.
                             category = null,
                             duration = it.duration?.toString(),
                             durationSeconds = it.duration,
-                            resultType = "VIDEO",
+                            resultType = if (it.isLive) LIVE_RESULT_TYPE else "VIDEO",
                             thumbnails = it.thumbnails?.thumbnails?.toListThumbnail() ?: listOf(),
                             title = it.title,
                             videoId = it.id,
@@ -504,9 +511,16 @@ internal fun AccountInfo.toDomainAccountInfo(): com.novosynk.domain.data.model.a
         name = this.name,
         email = this.email,
         pageId = this.pageId,
+        authUser = this.authUser,
         thumbnails = thumbnails.toListThumbnail(),
     )
 
+/**
+ * One item of a "More" page as the [Content] a home card is drawn from. The card works out what the
+ * item is from which id is set — a videoId plays it, a browseId opens an album or artist, a
+ * playlistId opens a playlist — and draws a wide thumbnail as a video card and a square one as a
+ * song card, so the sizes are set here to say which, not read off the response.
+ */
 internal fun YTItem.toHomeContent(): Content =
     when (this) {
         is SongItem -> {
@@ -523,6 +537,7 @@ internal fun YTItem.toHomeContent(): Content =
                 views = null,
                 durationSeconds = duration,
                 videoType = musicVideoType,
+                isLive = isLive,
             )
         }
 
@@ -540,6 +555,7 @@ internal fun YTItem.toHomeContent(): Content =
                 views = view,
                 durationSeconds = duration,
                 videoType = musicVideoType,
+                isLive = isLive,
             )
         }
 
@@ -587,19 +603,47 @@ internal fun YTItem.toHomeContent(): Content =
                 views = null,
             )
         }
-
-        else -> {
-            Content(
-                album = null,
-                artists = null,
-                description = null,
-                isExplicit = false,
-                playlistId = null,
-                browseId = null,
-                thumbnails = emptyList(),
-                title = "",
-                videoId = null,
-                views = null,
-            )
-        }
     }
+
+internal fun CommentItem.toYouTubeComment(): YouTubeComment =
+    YouTubeComment(
+        id = id,
+        author = author,
+        authorAvatar = authorAvatar,
+        authorChannelId = authorChannelId,
+        isVerified = isVerified,
+        isCreator = isCreator,
+        text = text,
+        publishedTime = publishedTime,
+        likeCount = likeCount,
+        likeCountLiked = likeCountLiked,
+        likeState = CommentLikeState.valueOf(likeState.name),
+        isHearted = isHearted,
+        isPinned = isPinned,
+        repliesLabel = repliesLabel,
+        repliesToken = repliesToken,
+        likeAction = likeAction,
+        unlikeAction = unlikeAction,
+        dislikeAction = dislikeAction,
+        undislikeAction = undislikeAction,
+        replyParams = replyParams,
+        replyPlaceholder = replyPlaceholder,
+    )
+
+internal fun CommentsPage.toYouTubeCommentsPage(): YouTubeCommentsPage =
+    YouTubeCommentsPage(
+        header =
+            header?.let {
+                YouTubeCommentsHeader(
+                    countText = it.countText,
+                    countShort = it.countShort,
+                    createParams = it.createParams,
+                    placeholder = it.placeholder,
+                    userAvatar = it.userAvatar,
+                )
+            },
+        comments = comments.map { it.toYouTubeComment() },
+        nextToken = nextToken,
+        nextLabel = nextLabel,
+    )
+

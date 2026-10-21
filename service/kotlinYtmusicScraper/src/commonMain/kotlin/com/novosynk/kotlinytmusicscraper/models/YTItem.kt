@@ -39,9 +39,16 @@ data class SongItem(
      * music config. Null is "not stated", not "audio" — see `MusicVideoType` in core/domain.
      */
     val musicVideoType: String? = null,
+    /**
+     * The other rendition of this recording — the song for a music video, or the reverse — when
+     * YouTube shipped one alongside it in a queue. Only a logged-in client is sent these.
+     */
+    val counterpart: SongItem? = null,
+    /** A broadcast on air right now, from the row's LIVE chip. False also means "the row did not say". */
+    val isLive: Boolean = false,
 ) : YTItem() {
     override val shareLink: String
-        get() = "https://Musico.org/app/watch?v=$id"
+        get() = "https://simpmusic.org/app/watch?v=$id"
     override val type: YTItemType
         get() = YTItemType.SONG
 
@@ -67,9 +74,11 @@ data class VideoItem(
     val setVideoId: String? = null,
     /** See [SongItem.musicVideoType]. */
     val musicVideoType: String? = null,
+    /** See [SongItem.isLive]. */
+    val isLive: Boolean = false,
 ) : YTItem() {
     override val shareLink: String
-        get() = "https://Musico.org/app/watch?v=$id"
+        get() = "https://simpmusic.org/app/watch?v=$id"
     override val type: YTItemType
         get() = YTItemType.VIDEO
 }
@@ -86,7 +95,7 @@ data class AlbumItem(
     override val explicit: Boolean = false,
 ) : YTItem() {
     override val shareLink: String
-        get() = "https://Musico.org/app/playlist?list=$playlistId"
+        get() = "https://simpmusic.org/app/playlist?list=$playlistId"
     override val type: YTItemType
         get() = YTItemType.ALBUM
 }
@@ -104,7 +113,7 @@ data class PlaylistItem(
     override val explicit: Boolean
         get() = false
     override val shareLink: String
-        get() = "https://Musico.org/app/playlist?list=$id"
+        get() = "https://simpmusic.org/app/playlist?list=$id"
     override val type: YTItemType
         get() = YTItemType.PLAYLIST
 }
@@ -120,7 +129,7 @@ data class ArtistItem(
     override val explicit: Boolean
         get() = false
     override val shareLink: String
-        get() = "https://Musico.org/app/channel/$id"
+        get() = "https://simpmusic.org/app/channel/$id"
     override val type: YTItemType
         get() = YTItemType.ARTIST
 }

@@ -90,7 +90,7 @@ internal fun parseMoodsMomentObject(data: BrowseResponse?): MoodsMomentObject? {
                                         ?.takeIf { it.isNotBlank() }
                                         ?: artistRuns?.firstOrNull()?.text
                                 // Song rows ship 60px/120px art because YouTube lists them small;
-                                // Musico draws them as full-size cards. Same w120 -> w544 bump
+                                // SimpMusic draws them as full-size cards. Same w120 -> w544 bump
                                 // used by Track.toGenericMediaItem and toSongEntity.
                                 val songThumbnails =
                                     renderer

@@ -10,7 +10,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlin.concurrent.Volatile
 import kotlin.time.Clock
 
 /**

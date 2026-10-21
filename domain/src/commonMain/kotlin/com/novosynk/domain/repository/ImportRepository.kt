@@ -4,7 +4,7 @@ import com.novosynk.domain.data.model.importdata.ImportResult
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Writes a file produced by the Musico web converter into the local database.
+ * Writes a file produced by the SimpMusic web converter into the local database.
  *
  * The web side already resolved every track to a YouTube Music videoId, so this does no network
  * work at all — it parses, then writes songs and local playlists in batches.

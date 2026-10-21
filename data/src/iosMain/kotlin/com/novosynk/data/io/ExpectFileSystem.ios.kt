@@ -4,4 +4,4 @@ import com.novosynk.data.db.documentDirectory
 import okio.FileSystem
 
 actual fun fileSystem(): FileSystem = FileSystem.SYSTEM
-actual fun fileDir(): String = documentDirectory() + "/Musico"
+actual fun fileDir(): String = documentDirectory() + "/SimpMusic"

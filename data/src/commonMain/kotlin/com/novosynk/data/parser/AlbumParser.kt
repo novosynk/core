@@ -6,12 +6,13 @@ import com.novosynk.domain.data.model.browse.artist.ResultAlbum
 import com.novosynk.domain.data.model.searchResult.songs.Album
 import com.novosynk.domain.data.model.searchResult.songs.Artist
 import com.novosynk.domain.data.model.searchResult.songs.Thumbnail
+import com.novosynk.domain.utils.LIVE_RESULT_TYPE
 import com.novosynk.kotlinytmusicscraper.pages.AlbumPage
 import com.novosynk.logger.Logger
 
 internal fun parseAlbumData(data: AlbumPage): AlbumBrowse {
     val artist: ArrayList<Artist> = arrayListOf()
-    Logger.w("AlbumParser", "Parsing album data \n$data")
+    Logger.d("AlbumParser", "Parsing album ${data.album.title}: ${data.songs.size} songs")
     data.album.artists?.forEach {
         artist.add(Artist(it.id, it.name))
     }
@@ -33,8 +34,10 @@ internal fun parseAlbumData(data: AlbumPage): AlbumBrowse {
                     },
                 duration =
                     if (songItem.duration != null) {
-                        val totalSec = songItem.duration ?: 0
-                        "${(totalSec / 60).toString().padStart(2, '0')}:${(totalSec % 60).toString().padStart(2, '0')}"
+                        "%02d:%02d".format(
+                            (songItem.duration ?: 0) / 60,
+                            (songItem.duration ?: 0) % 60,
+                        )
                     } else {
                         ""
                     },
@@ -48,7 +51,7 @@ internal fun parseAlbumData(data: AlbumPage): AlbumBrowse {
                 videoType = songItem.musicVideoType,
                 category = null,
                 feedbackTokens = null,
-                resultType = null,
+                resultType = if (songItem.isLive) LIVE_RESULT_TYPE else null,
                 year = data.album.year.toString(),
             ),
         )

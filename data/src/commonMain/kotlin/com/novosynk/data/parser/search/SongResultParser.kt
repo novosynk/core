@@ -3,6 +3,7 @@ package com.novosynk.data.parser.search
 import com.novosynk.domain.data.model.searchResult.songs.Album
 import com.novosynk.domain.data.model.searchResult.songs.SongsResult
 import com.novosynk.domain.data.model.searchResult.songs.Thumbnail
+import com.novosynk.domain.utils.LIVE_RESULT_TYPE
 import com.novosynk.kotlinytmusicscraper.models.SongItem
 import com.novosynk.kotlinytmusicscraper.pages.SearchResult
 
@@ -29,11 +30,11 @@ internal fun parseSearchSong(result: SearchResult): ArrayList<SongsResult> {
                         )
                     },
                 category = "Song",
-                duration = if (song.duration != null) "${(song.duration!! / 60).toString().padStart(2, '0')}:${(song.duration!! % 60).toString().padStart(2, '0')}" else "",
+                duration = if (song.duration != null) "%02d:%02d".format(song.duration!! / 60, song.duration!! % 60) else "",
                 durationSeconds = song.duration ?: 0,
                 feedbackTokens = null,
                 isExplicit = song.explicit,
-                resultType = "Song",
+                resultType = if (song.isLive) LIVE_RESULT_TYPE else "Song",
                 thumbnails = listOf(Thumbnail(544, Regex("([wh])120").replace(song.thumbnail, "$1544"), 544)),
                 title = song.title,
                 videoId = song.id,

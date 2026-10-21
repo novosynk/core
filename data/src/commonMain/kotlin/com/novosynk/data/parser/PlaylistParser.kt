@@ -10,6 +10,7 @@ import com.novosynk.domain.data.model.searchResult.songs.Album
 import com.novosynk.domain.data.model.searchResult.songs.Artist
 import com.novosynk.domain.data.model.searchResult.songs.Thumbnail
 import com.novosynk.domain.extension.now
+import com.novosynk.domain.utils.LIVE_RESULT_TYPE
 import com.novosynk.kotlinytmusicscraper.models.MusicShelfRenderer
 import com.novosynk.kotlinytmusicscraper.models.SectionListRenderer
 import com.novosynk.kotlinytmusicscraper.models.response.BrowseResponse
@@ -329,7 +330,7 @@ internal fun parsePlaylistData(
                     videoType = renderer?.musicVideoType,
                     category = null,
                     feedbackTokens = null,
-                    resultType = null,
+                    resultType = if (renderer?.isLive == true) LIVE_RESULT_TYPE else null,
                     year = null,
                 )
             if (track.videoId != "") {

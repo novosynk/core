@@ -1,9 +1,13 @@
 package com.novosynk.kotlinytmusicscraper.extension
 
-import okio.ByteString.Companion.encodeUtf8
+import java.security.MessageDigest
 import kotlin.random.Random
 
-fun String.sha256(): String = encodeUtf8().sha256().hex()
+fun String.sha256(): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    val hash = digest.digest(toByteArray())
+    return hash.fold("", { str, it -> str + "%02x".format(it) })
+}
 
 fun randomString(length: Int): String {
     val chars = "0123456789abcdef"

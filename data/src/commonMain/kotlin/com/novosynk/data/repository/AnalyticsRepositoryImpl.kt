@@ -4,8 +4,8 @@ import com.novosynk.data.db.datasource.AnalyticsDatasource
 import com.novosynk.domain.data.entities.analytics.PlaybackEventEntity
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedAlbum
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtist
-import com.novosynk.domain.data.entities.analytics.query.TopPlayedTracks
 import com.novosynk.domain.data.entities.analytics.query.TopPlayedArtistTime
+import com.novosynk.domain.data.entities.analytics.query.TopPlayedTracks
 import com.novosynk.domain.data.model.analytics.AnalyticsPeriodStats
 import com.novosynk.domain.data.model.analytics.DecadePlays
 import com.novosynk.domain.data.model.analytics.ListeningFingerprint
@@ -16,10 +16,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalDate
 import kotlin.math.ln
 import kotlin.math.sqrt
+import kotlin.time.ExperimentalTime
 
 private const val TAG = "AnalyticsRepositoryImpl"
 
@@ -164,6 +166,7 @@ internal class AnalyticsRepositoryImpl(
             )
         }.flowOn(Dispatchers.IO)
 
+    @OptIn(ExperimentalTime::class)
     override suspend fun getPeriodStats(
         startTimestamp: LocalDateTime,
         endTimestamp: LocalDateTime,
@@ -172,6 +175,10 @@ internal class AnalyticsRepositoryImpl(
             val samples = analyticsDatasource.getPlaybackSamplesInRange(startTimestamp, endTimestamp)
             if (samples.isEmpty()) return@withContext AnalyticsPeriodStats()
 
+            // No timezone arithmetic here on purpose. PlaybackSample.timestamp is a LocalDateTime,
+            // so Room's converter has already handed back the wall clock the listener saw, and the
+            // hour and the date read straight off it. Decoding the raw column by hand is what put
+            // this screen's busiest hour at 03:00 on a UTC+7 machine.
             val hours = IntArray(24)
             val perDay = mutableMapOf<LocalDate, Int>()
             var listened = 0L
@@ -215,6 +222,12 @@ internal class AnalyticsRepositoryImpl(
             )
         }
 
+    /**
+     * The five behaviour axes, each bounded 0..1 by construction so no external scale is needed.
+     *
+     * Every one of them divides by something that can be zero on a thin period, so each guards its
+     * own denominator rather than relying on the caller to have enough data.
+     */
     private fun fingerprintOf(
         dailyCounts: List<Int>,
         artistPlays: List<Int>,
@@ -223,6 +236,8 @@ internal class AnalyticsRepositoryImpl(
         distinctTracks: Int,
         plays: Int,
     ): ListeningFingerprint {
+        // Relative spread of the daily counts, inverted: listening a little every day scores high,
+        // one big binge and six silent days scores low.
         val consistency =
             if (dailyCounts.size < 2) {
                 0f
@@ -237,6 +252,9 @@ internal class AnalyticsRepositoryImpl(
             }
 
         val artistTotal = artistPlays.sum()
+        // Normalised Shannon entropy. ln(n) is the entropy of a perfectly even spread over the same
+        // number of artists, so dividing by it asks "how even is this, for its size" rather than
+        // "how many artists" — otherwise a bigger library would always look more diverse.
         val diversity =
             if (artistTotal <= 0 || artistPlays.size < 2) {
                 0f

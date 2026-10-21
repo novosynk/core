@@ -4,6 +4,7 @@ import com.novosynk.kotlinytmusicscraper.models.Album
 import com.novosynk.kotlinytmusicscraper.models.Artist
 import com.novosynk.kotlinytmusicscraper.models.BrowseEndpoint
 import com.novosynk.kotlinytmusicscraper.models.MusicResponsiveListItemRenderer
+import com.novosynk.kotlinytmusicscraper.models.PlaylistPanelRenderer
 import com.novosynk.kotlinytmusicscraper.models.PlaylistPanelVideoRenderer
 import com.novosynk.kotlinytmusicscraper.models.SongItem
 import com.novosynk.kotlinytmusicscraper.models.WatchEndpoint
@@ -96,8 +97,15 @@ object NextPage {
                     ?.watchEndpoint,
             thumbnails = renderer.thumbnail?.musicThumbnailRenderer?.thumbnail,
             musicVideoType = renderer.musicVideoType,
+            isLive = renderer.isLive,
         )
     }
+
+    /** A queue row, carrying its other rendition as [SongItem.counterpart] when YouTube sent one. */
+    fun fromPlaylistPanelContent(content: PlaylistPanelRenderer.Content): SongItem? =
+        content.track?.let(::fromPlaylistPanelVideoRenderer)?.copy(
+            counterpart = content.counterpartTrack?.let(::fromPlaylistPanelVideoRenderer),
+        )
 
     fun fromPlaylistPanelVideoRenderer(renderer: PlaylistPanelVideoRenderer): SongItem? {
         val longByLineRuns = renderer.longBylineText?.runs?.splitBySeparator() ?: return null
@@ -147,6 +155,7 @@ object NextPage {
                     ?.watchEndpointMusicSupportedConfigs
                     ?.watchEndpointMusicConfig
                     ?.musicVideoType,
+            isLive = renderer.isLive,
         )
     }
 }
