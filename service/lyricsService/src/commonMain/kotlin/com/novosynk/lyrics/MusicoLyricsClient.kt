@@ -201,7 +201,11 @@ class MusicoLyricsClient {
             val data = body<BaseResponse<T>>()
             if (data.error != null) {
                 val error = data.error
-                Logger.e(TAG, "Error response: ${error.reason} (code: ${error.code})")
+                if (error.code == 404) {
+                    Logger.d(TAG, "Lyrics not found: ${error.reason}")
+                } else {
+                    Logger.e(TAG, "Error response: ${error.reason} (code: ${error.code})")
+                }
                 throw Exception("Error response: ${error.reason} (code: ${error.code})")
             }
             return data.data ?: throw Exception("Response data is null")

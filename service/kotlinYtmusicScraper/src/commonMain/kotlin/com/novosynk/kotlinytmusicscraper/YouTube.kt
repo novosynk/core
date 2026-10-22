@@ -2268,15 +2268,26 @@ class YouTube {
         listFormat
             .firstOrNull { it.itag == ITAG.AUDIO_OPUS_MEDIUM }
             ?.let { format ->
-                val sc = format.signatureCipher ?: format.url ?: return null
-                val params = parseQueryString(sc)
-                val url =
-                    params["url"]?.let { URLBuilder(it) }
-                        ?: run {
-                            Logger.e(TAG, "Could not parse cipher url")
+                val cipher = format.signatureCipher
+                val directUrl = format.url
+                when {
+                    cipher != null -> {
+                        val params = parseQueryString(cipher)
+                        val url = params["url"]?.let { URLBuilder(it) } ?: run {
+                            Logger.w(TAG, "Could not parse cipher url")
                             return null
                         }
-                url.parameters["n"]
+                        url.parameters["n"]
+                    }
+                    directUrl != null -> {
+                        try {
+                            URLBuilder(directUrl).parameters["n"]
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    else -> null
+                }
             }
 
     fun download(

@@ -2236,8 +2236,16 @@ internal class CrossfadeExoPlayerAdapter(
 
                 Logger.d(TAG, "Starting crossfade to track $nextIndex")
 
-                // Get or create secondary player
-                val cachedPlayerEntry = precachedPlayers.remove(nextVideoId)
+                // Get or create secondary player (discarding any precached player that encountered an error)
+                val cachedPlayerEntry =
+                    precachedPlayers.remove(nextVideoId)?.let { cached ->
+                        if (cached.player.playerError == null) {
+                            cached
+                        } else {
+                            cached.player.release()
+                            null
+                        }
+                    }
                 val nextPlayer: ExoPlayer
                 val nextFilter: CrossfadeFilterAudioProcessor?
                 if (cachedPlayerEntry?.player != null) {
@@ -2347,7 +2355,7 @@ internal class CrossfadeExoPlayerAdapter(
                 performCrossfade(nextIndex, nextPlayer, effectiveCrossfadeDurationMs, bpmSpeedRatio, keyPitchRatio)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Logger.e(TAG, "Crossfade error: ${e.message}", e)
+                Logger.w(TAG, "Crossfade fallback to standard playback: ${e.message}")
                 secondaryPlayerFilter?.enabled = false
                 secondaryPlayer?.let { cleanupPlayerInternal(it) }
                 secondaryPlayer = null
