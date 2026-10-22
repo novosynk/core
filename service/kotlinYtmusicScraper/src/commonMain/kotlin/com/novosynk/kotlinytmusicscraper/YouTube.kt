@@ -1380,15 +1380,7 @@ class YouTube {
             sigResponse = tempRes
         }
         val streamsList = ytMusic.getNewPipePlayer(videoId).orderByAudioTrack(preferredAudioLanguage)
-        if (streamsList.isEmpty()) {
-            val hasDirectUrls = tempRes.streamingData?.adaptiveFormats?.any { !it.url.isNullOrEmpty() } == true ||
-                tempRes.streamingData?.formats?.any { !it.url.isNullOrEmpty() } == true
-            if (hasDirectUrls) {
-                Logger.d(TAG, "NewPipe returned empty, falling back to direct URLs in tempRes")
-                return tempRes
-            }
-            return null
-        }
+        if (streamsList.isEmpty()) return null
 
         decodedSigResponse =
             sigResponse.copy(
