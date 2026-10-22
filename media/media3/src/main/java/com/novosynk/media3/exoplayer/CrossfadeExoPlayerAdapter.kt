@@ -1605,15 +1605,6 @@ internal class CrossfadeExoPlayerAdapter(
             InternalState.ERROR -> {
                 listeners.forEach { it.onPlaybackStateChanged(PlayerConstants.STATE_IDLE) }
                 listeners.forEach { it.onIsPlayingChanged(false) }
-                listeners.forEach {
-                    it.onPlayerError(
-                        PlayerError(
-                            errorCode = 403,
-                            errorCodeName = "ERROR_UNKNOWN",
-                            message = "Can not extract playable URL or playback error",
-                        ),
-                    )
-                }
             }
         }
     }
@@ -1850,24 +1841,26 @@ internal class CrossfadeExoPlayerAdapter(
 
                 override fun onPlayerError(error: PlaybackException) {
                     if (player != currentPlayer) {
+                        if (player == secondaryPlayer && isCrossfading) {
+                            Logger.w(TAG, "Error in secondary player during crossfade: ${error.message}")
+                            coroutineScope.launch {
+                                cancelCrossfadeAndRestoreCurrent(error)
+                            }
+                            return
+                        }
                         Logger.d(TAG, "Ignoring onPlayerError from non-current player")
                         return
                     }
 
-                    // Retry for source errors (expired/invalid stream URL)
-                    // ERROR_CODE_PARSING_CONTAINER_MALFORMED (3001) = server returned non-media response (e.g. HTML error page)
-                    // ERROR_CODE_IO_BAD_HTTP_STATUS (2004) = HTTP 403/410 from expired URL
-                    // ERROR_CODE_IO_NETWORK_CONNECTION_FAILED (2001) = connection refused
-                    // ERROR_CODE_IO_FILE_NOT_FOUND (2005) = the resolver served a cache hit as a bare
-                    //   media id and the cached spans were evicted (or cleared) mid-read, so
-                    //   DefaultDataSource fell through to FileDataSource on a scheme-less URI. Media3
-                    //   lists FileNotFoundException as non-retriable, so this layer is the only chance
-                    //   to recover; reloading re-runs the resolver, which now sees an incomplete cache
-                    //   and resolves a real URL.
+                    // Retry for source errors (expired/invalid stream URL, network drops, etc.)
                     val isRetryableSourceError =
                         error.errorCode == PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED ||
                             error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
-                            error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                            error.errorCode == PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE
 
                     val currentVideoId = playlist.getOrNull(localCurrentMediaItemIndex)?.mediaId
                     // The progressive resolver found this track to be a live broadcast. Loading it
@@ -2024,6 +2017,11 @@ internal class CrossfadeExoPlayerAdapter(
         crossfadeJob = null
         setCrossfading(false)
 
+        secondaryPlayerFilter?.enabled = false
+        secondaryPlayer?.let { cleanupPlayerInternal(it) }
+        secondaryPlayer = null
+        secondaryPlayerFilter = null
+
         currentPlayer?.let { cleanupPlayerInternal(it) }
         currentPlayer = null
     }
@@ -2043,6 +2041,42 @@ internal class CrossfadeExoPlayerAdapter(
      * Does NOT change [internalState], restart position updates, or seek — the caller
      * decides what to do next (pause in place, advance to A+2, go to previous, ...).
      */
+    /**
+     * Abort an in-progress crossfade when the incoming track errors out, restoring the
+     * outgoing track at full volume so playback is not interrupted by failure of next track.
+     */
+    private fun cancelCrossfadeAndRestoreCurrent(error: PlaybackException?) {
+        Logger.w(TAG, "Canceling crossfade and restoring current track: ${error?.message}")
+        crossfadeJob?.cancel()
+        crossfadeJob = null
+
+        secondaryPlayerFilter?.enabled = false
+        secondaryPlayer?.let { cleanupPlayerInternal(it) }
+        secondaryPlayer = null
+        secondaryPlayerFilter = null
+
+        currentPlayer?.let { curr ->
+            setupPlayerListenerInternal(curr)
+            forwardingPlayer.swapDelegate(curr)
+            forwardingPlayer.notifyMediaItemChanged()
+            curr.volume = internalVolume
+            curr.playbackParameters = PlaybackParameters(internalPlaybackSpeed, internalPlaybackPitch)
+            currentPlayerFilter?.enabled = false
+        }
+
+        if (crossfadeFromIndex >= 0 && crossfadeFromIndex < playlist.size) {
+            localCurrentMediaItemIndex = crossfadeFromIndex
+            playlist.getOrNull(crossfadeFromIndex)?.let {
+                listeners.forEach { l ->
+                    l.onMediaItemTransition(it, PlayerConstants.MEDIA_ITEM_TRANSITION_REASON_AUTO)
+                }
+            }
+        }
+
+        setCrossfading(false)
+        crossfadeFromIndex = -1
+    }
+
     private fun commitIncomingAsCurrentInternal() {
         crossfadeJob?.cancel()
         crossfadeJob = null
@@ -2314,6 +2348,15 @@ internal class CrossfadeExoPlayerAdapter(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Logger.e(TAG, "Crossfade error: ${e.message}", e)
+                secondaryPlayerFilter?.enabled = false
+                secondaryPlayer?.let { cleanupPlayerInternal(it) }
+                secondaryPlayer = null
+                secondaryPlayerFilter = null
+                currentPlayer?.let { curr ->
+                    setupPlayerListenerInternal(curr)
+                    forwardingPlayer.swapDelegate(curr)
+                    curr.volume = internalVolume
+                }
                 setCrossfading(false)
                 // Fallback to normal transition
                 seekTo(nextIndex, 0)
@@ -2406,6 +2449,19 @@ internal class CrossfadeExoPlayerAdapter(
         crossfadeJob =
             coroutineScope.launch {
                 try {
+                    // Wait briefly for incoming track to be ready (up to 1500ms) to avoid fading out to silence
+                    val waitStart = System.currentTimeMillis()
+                    while (nextPlayer.playbackState != Player.STATE_READY &&
+                        nextPlayer.playbackState != Player.STATE_ENDED &&
+                        (System.currentTimeMillis() - waitStart) < 1500L &&
+                        isActive
+                    ) {
+                        if (nextPlayer.playerError != null) {
+                            throw nextPlayer.playerError!!
+                        }
+                        delay(50)
+                    }
+
                     for (step in 0..steps) {
                         if (!isActive) break
 

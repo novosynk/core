@@ -310,15 +310,10 @@ private fun provideResolvingDataSourceFactory(
                 streamRepository.getNewFormat(id).lastOrNull()?.let {
                     val videoUrl = it.videoUrl
                     if (videoUrl != null && it.expiredTime > now()) {
-                        Logger.d("Stream", videoUrl)
-                        Logger.d("Stream", "Video from format")
-                        val is403Url = streamRepository.is403Url(videoUrl).firstOrNull() != false
-                        Logger.d("Stream", "is 403 $is403Url")
-                        if (!is403Url) {
-                            dataSpecReturn = dataSpec.withUri(videoUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
-                            resolved = true
-                            return@runBlocking
-                        }
+                        Logger.d("Stream", "Using cached video URL for $id")
+                        dataSpecReturn = dataSpec.withUri(videoUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
+                        resolved = true
+                        return@runBlocking
                     }
                 }
                 streamRepository
@@ -329,8 +324,7 @@ private fun provideResolvingDataSourceFactory(
                         isVideo = true,
                     ).lastOrNull()
                     ?.let {
-                        Logger.d("Stream", it)
-                        Logger.d("Stream", "Video")
+                        Logger.d("Stream", "Resolved video stream for $id")
                         dataSpecReturn = dataSpec.withUri(it.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
                         resolved = true
                     }
@@ -338,15 +332,10 @@ private fun provideResolvingDataSourceFactory(
                 streamRepository.getNewFormat(mediaId).lastOrNull()?.let {
                     val audioUrl = it.audioUrl
                     if (audioUrl != null && it.expiredTime > now()) {
-                        Logger.d("Stream", audioUrl)
-                        Logger.d("Stream", "Audio from format")
-                        val is403Url = streamRepository.is403Url(audioUrl).firstOrNull() != false
-                        Logger.d("Stream", "is 403 $is403Url")
-                        if (!is403Url) {
-                            dataSpecReturn = dataSpec.withUri(audioUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
-                            resolved = true
-                            return@runBlocking
-                        }
+                        Logger.d("Stream", "Using cached audio URL for $mediaId")
+                        dataSpecReturn = dataSpec.withUri(audioUrl.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
+                        resolved = true
+                        return@runBlocking
                     }
                 }
                 streamRepository
@@ -357,8 +346,7 @@ private fun provideResolvingDataSourceFactory(
                         isVideo = false,
                     ).lastOrNull()
                     ?.let {
-                        Logger.d("Stream", it)
-                        Logger.d("Stream", "Audio")
+                        Logger.d("Stream", "Resolved audio stream for $mediaId")
                         dataSpecReturn = dataSpec.withUri(it.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
                         resolved = true
                     }
@@ -367,6 +355,26 @@ private fun provideResolvingDataSourceFactory(
         // getStream above is where a live broadcast is first recognised. Its HLS playlist URL must
         // not be read as a file, so this source fails and the track is rebuilt as HLS.
         if (LiveStreamRegistry.isLive(videoId)) throw LiveStreamDetectedException(videoId)
+        if (!resolved) {
+            // Immediate retry with clean cache
+            runBlocking(Dispatchers.IO) {
+                val isVideo = mediaId.contains(MERGING_DATA_TYPE.VIDEO)
+                val targetId = if (isVideo) mediaId.removePrefix(MERGING_DATA_TYPE.VIDEO) else mediaId
+                streamRepository.invalidateFormat(targetId)
+                streamRepository
+                    .getStream(
+                        dataStoreManager,
+                        targetId,
+                        isDownloading = false,
+                        isVideo = isVideo,
+                    ).lastOrNull()
+                    ?.let {
+                        Logger.d("Stream", "Resolved stream on retry for $targetId")
+                        dataSpecReturn = dataSpec.withUri(it.toUri()).subrange(dataSpec.uriPositionOffset, chunkLength)
+                        resolved = true
+                    }
+            }
+        }
         if (!resolved) {
             Logger.e("Stream", "Failed to resolve stream URL for $mediaId")
             throw java.io.IOException("Failed to resolve stream URL for $mediaId")
