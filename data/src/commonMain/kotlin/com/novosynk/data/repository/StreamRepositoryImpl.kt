@@ -310,7 +310,7 @@ internal class StreamRepositoryImpl(
                     }
                 }.onFailure {
                     it.printStackTrace()
-                    Logger.e("Stream", "Error: ${it.message}")
+                    Logger.w("Stream", "Track stream unavailable: ${it.message}")
                     emit(null)
                 }
         }.flowOn(Dispatchers.IO)

@@ -62,6 +62,19 @@ object Logger {
         }
     }
 
+    /** Clears log files from disk. */
+    fun clearLogFiles() {
+        val directory = logDirectory ?: return
+        runCatching {
+            listOf(APP_LOG, ERROR_LOG).flatMap { logFiles(it) }.forEach { filePath ->
+                val p = Path(filePath)
+                if (SystemFileSystem.exists(p)) {
+                    SystemFileSystem.delete(p)
+                }
+            }
+        }
+    }
+
     fun d(
         tag: String,
         message: String,

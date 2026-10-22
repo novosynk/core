@@ -1644,6 +1644,17 @@ class YouTube {
             } else {
                 Logger.d(TAG, "YouTube Player no URL found")
             }
+            if (decodedSigResponse == null) {
+                val hasDirectAudio = tempRes.streamingData?.adaptiveFormats?.any {
+                    !it.url.isNullOrEmpty() && it.mimeType?.startsWith("audio/") == true
+                } == true || tempRes.streamingData?.formats?.any {
+                    !it.url.isNullOrEmpty() && it.mimeType?.startsWith("audio/") == true
+                } == true
+                if (hasDirectAudio) {
+                    Logger.d(TAG, "YouTube Player using direct streaming formats")
+                    decodedSigResponse = tempRes
+                }
+            }
             if (decodedSigResponse == null) throw RuntimeException("No URL found")
             val firstThumb =
                 decodedSigResponse.videoDetails

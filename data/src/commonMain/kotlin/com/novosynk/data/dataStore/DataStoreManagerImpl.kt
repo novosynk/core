@@ -1044,7 +1044,7 @@ internal class DataStoreManagerImpl(
 
     override val customThemeColor =
         settingsDataStore.data.map { preferences ->
-            preferences[CUSTOM_THEME_COLOR] ?: DataStoreManager.DEFAULT_THEME_COLOR_HEX
+            (preferences[CUSTOM_THEME_COLOR] ?: DataStoreManager.DEFAULT_THEME_COLOR_HEX).let { if (it.equals("FF8ECAE6", ignoreCase = true)) DataStoreManager.DEFAULT_THEME_COLOR_HEX else it }
         }
 
     override suspend fun setCustomThemeColor(argbHex: String) {
