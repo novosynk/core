@@ -26,7 +26,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
@@ -45,11 +45,17 @@ class SupabaseRepositoryImpl(
         ignoreUnknownKeys = true
         isLenient = true
         encodeDefaults = true
+        explicitNulls = false
     }
 
     private val client = HttpClient(getEngine()) {
         install(ContentNegotiation) {
             json(json)
+        }
+        install(io.ktor.client.plugins.HttpTimeout) {
+            requestTimeoutMillis = 30000
+            connectTimeoutMillis = 15000
+            socketTimeoutMillis = 30000
         }
     }
 
@@ -170,8 +176,42 @@ class SupabaseRepositoryImpl(
     ): Flow<Resource<Boolean>> =
         flow {
             try {
-                // Step 1: Insert into `bug_reports` with id = null so Postgres generates valid UUID
-                val finalReport = report.copy(id = null)
+                var uploadedStoragePath: String? = null
+                val ext = screenshotFileName?.substringAfterLast('.', "jpg")?.lowercase() ?: "jpg"
+                val mimeType = if (ext == "png") "image/png" else "image/jpeg"
+
+                // Step 1: Upload screenshot to Supabase Storage bucket `bug-screenshots` if attached
+                if (screenshotBytes != null && screenshotBytes.isNotEmpty()) {
+                    try {
+                        val storageFileName = "bug_${Clock.System.now().toEpochMilliseconds()}_${(1000..9999).random()}.$ext"
+                        val storagePath = "screenshots/$storageFileName"
+
+                        val uploadResponse = client.post("$supabaseUrl/storage/v1/object/bug-screenshots/$storagePath") {
+                            header("apikey", supabaseKey)
+                            header("Authorization", "Bearer $supabaseKey")
+                            header("x-upsert", "true")
+                            contentType(ContentType.parse(mimeType))
+                            setBody(screenshotBytes)
+                        }
+
+                        if (uploadResponse.status.isSuccess()) {
+                            uploadedStoragePath = storagePath
+                            Logger.d("SupabaseRepo", "Uploaded screenshot to Supabase storage: $storagePath")
+                        } else {
+                            Logger.w("SupabaseRepo", "Storage upload warning: HTTP ${uploadResponse.status.value} - ${uploadResponse.bodyAsText()}")
+                        }
+                    } catch (e: Exception) {
+                        Logger.w("SupabaseRepo", "Failed to upload screenshot to storage: ${e.message}")
+                    }
+                }
+
+                // Step 2: Insert into `bug_reports` with id = null and createdAt = null
+                // With explicitNulls = false, id & created_at are omitted from JSON so PostgreSQL generates gen_random_uuid() and now()
+                val finalReport = report.copy(
+                    id = null,
+                    createdAt = null,
+                    screenshotPath = uploadedStoragePath ?: report.screenshotPath,
+                )
                 val bugReportPayload = json.encodeToString(BugReport.serializer(), finalReport)
                 val insertBugResponse = client.post("$supabaseUrl/rest/v1/bug_reports") {
                     header("apikey", supabaseKey)
@@ -188,22 +228,17 @@ class SupabaseRepositoryImpl(
                     return@flow
                 }
 
-                // Step 2: If screenshot exists, attach directly via Base64 Data URI
-                if (screenshotBytes != null && screenshotBytes.isNotEmpty()) {
+                // Step 3: Insert metadata to `bug_report_attachments` if screenshot was uploaded
+                if (uploadedStoragePath != null && screenshotBytes != null) {
                     try {
                         val responseText = insertBugResponse.bodyAsText()
                         val insertedList: List<BugReport> = json.decodeFromString(responseText)
                         val createdBugId = insertedList.firstOrNull()?.id
                         if (createdBugId != null) {
-                            val ext = screenshotFileName?.substringAfterLast('.', "jpg") ?: "jpg"
-                            val mimeType = if (ext.equals("png", ignoreCase = true)) "image/png" else "image/jpeg"
-                            val base64Data = kotlin.io.encoding.Base64.encode(screenshotBytes)
-                            val dataUri = "data:$mimeType;base64,$base64Data"
-
                             val attachment = BugReportAttachment(
                                 bugReportId = createdBugId,
-                                storagePath = dataUri,
-                                fileName = screenshotFileName ?: "screenshot.$ext",
+                                storagePath = uploadedStoragePath,
+                                fileName = screenshotFileName ?: uploadedStoragePath.substringAfterLast('/'),
                                 fileSize = screenshotBytes.size.toLong(),
                                 mimeType = mimeType,
                             )
@@ -215,13 +250,12 @@ class SupabaseRepositoryImpl(
                                 contentType(ContentType.Application.Json)
                                 setBody(attachmentPayload)
                             }
-
                             if (!insertAttachmentResponse.status.isSuccess()) {
                                 Logger.w("SupabaseRepo", "Attachment record insert warning: HTTP ${insertAttachmentResponse.status.value}")
                             }
                         }
                     } catch (e: Exception) {
-                        Logger.w("SupabaseRepo", "Failed to insert bug attachment metadata: ${e.message}")
+                        Logger.w("SupabaseRepo", "Failed to insert bug attachment record: ${e.message}")
                     }
                 }
 

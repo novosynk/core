@@ -87,6 +87,8 @@ data class BugReport(
     @SerialName("user_id")
     val userId: String? = null,
     val status: String = "new",
+    @SerialName("screenshot_path")
+    val screenshotPath: String? = null,
     @SerialName("created_at")
     val createdAt: String? = null,
 )
